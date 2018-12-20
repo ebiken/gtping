@@ -13,18 +13,20 @@ def getPacket(fd):
 def mkReply(req):
     ver = ord(struct.unpack('c', req[0])[0]) >> 5
     if ver == 1:
-        flags,msg,ln,teid,seq,npdu,next = struct.unpack('cchihcc', req)
-        if ord(msg) != 1:
-            return None
+        if len(req) == 12:
+            flags,msg,ln,teid,data = struct.unpack('cchii', req)
+            if (ord(msg) != 1) and (ord(msg) != 255):
+                return None
 
-        return struct.pack('cchihcc',
-                           flags,
-                           chr(2),
-                           ln,
-                           teid,
-                           seq,
-                           npdu,
-                           next)
+            return struct.pack('cchii',
+                               flags,
+                               #chr(2),
+                               chr(255),
+                               ln,
+                               teid,
+                               data)
+        else:
+            raise "HELL"
     elif ver == 2:
         if len(req) == 8:
             flags,msg,ln,seq,spare = struct.unpack('cchhh', req)
@@ -112,8 +114,10 @@ def loopJitter(fd, mintime=0, maxtime=1):
                                  fd, src,mkReply(packet)) )
 
 def main():
-    fd = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-    fd.bind( ('', 2123) )
+    # fd = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+    fd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # fd.bind( ('', 2123) ) # GTP Echo request port
+    fd.bind( ('', 2152) ) # GTP T-PDU port
     try:
         {
             'normal': loopNormal,

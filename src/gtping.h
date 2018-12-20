@@ -14,6 +14,22 @@
 
 #include "getaddrinfo.h"
 
+/* GTP packet as used with T-PDU */
+#pragma pack(1)
+struct GtpTpduV1 {
+        int has_npdu:1;
+        int has_seq:1;
+        int has_ext_head:1;
+        int res1:1;
+        int proto_type:1;
+        int version:3;
+
+        uint8_t msg;
+        uint16_t len;
+        uint32_t teid;
+        uint32_t data; /* should be var length */
+};
+#pragma pack()
 /* GTP packet as used with GTP Echo */
 #pragma pack(1)
 struct GtpEchoV1 {
@@ -75,6 +91,7 @@ struct GtpReply {
 enum {
         GTPMSG_ECHO = 1,
         GTPMSG_ECHOREPLY = 2,
+        GTPMSG_TPDU = 255,
 };
 
 /**

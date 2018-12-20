@@ -548,6 +548,39 @@ setupSocket()
  *
  */
 static size_t
+mktpdu_v1(int seq, void **packet)
+{
+        struct GtpTpduV1 *gtp;
+        if (!(gtp = malloc(sizeof(struct GtpTpduV1)))) {
+                return -errno;
+        }
+
+        *packet = gtp;
+
+        memset(gtp, 0, sizeof(struct GtpTpduV1));
+        gtp->version = 1;    /* options.version = 255 */
+        gtp->has_seq = 0;    /* turn off sequence numbers */
+        gtp->proto_type = 1; /* GTP, as opposed to GTP' */
+        gtp->res1 = 0;
+        gtp->has_ext_head = 0;
+        gtp->has_npdu = 0;
+
+        gtp->msg = GTPMSG_TPDU;
+        gtp->len = htons(4);
+        if (options.teid >= 0) {
+                gtp->teid = htonl(options.teid);
+        } else {
+                gtp->teid = 0;
+        }
+        gtp->data = htonl((uint32_t)seq);
+
+        return sizeof(struct GtpTpduV1);
+}
+
+/**
+ *
+ */
+static size_t
 mkping_v1(int seq, void **packet)
 {
         struct GtpEchoV1 *gtp;
@@ -616,6 +649,8 @@ mkping(int seq, void **packet)
                 return mkping_v1(seq, packet);
         case 2:
                 return mkping_v2(seq, packet);
+        case 255:
+                return mktpdu_v1(seq, packet);
         }
         fprintf(stderr,
                 "%s: internal error, bad version %d\n",
@@ -1499,10 +1534,10 @@ main(int argc, char **argv)
                                 break;
 			case 'g':
 				tmpu = strtoul(optarg, 0, 0);
-                                if (tmpu < 1 || tmpu > 2) {
+                                if ((tmpu < 1 || tmpu > 2) && tmpu != 255) {
                                         fprintf(stderr,
                                                 "%s: invalid GTP version %u. "
-                                                "Supported: 1 & 2.",
+                                                "Supported: 1, 2 & 255.",
                                                 argv0, tmpu);
                                 }
                                 options.version = tmpu;
